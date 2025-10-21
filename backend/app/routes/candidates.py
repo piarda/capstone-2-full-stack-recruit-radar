@@ -11,9 +11,13 @@ def get_candidates():
 
 @candidates_bp.route('/', methods=['POST'])
 def create_candidate():
-    data = request.get_json()
-
     try:
+        data = request.get_json(force=True)
+        print("Incoming data:", data)
+
+        if not data:
+            return jsonify({"error": "No JSON body provided"}), 400
+
         new_candidate = Candidate(
             name=data.get('name'),
             email=data.get('email'),
@@ -24,9 +28,11 @@ def create_candidate():
         db.session.commit()
         return jsonify(new_candidate.to_dict()), 201
     except Exception as e:
+        print("Error duriing candidate creation:", str(e))
+        db.session.rollback()
         return jsonify({"error": str(e)}), 400
 
-@candidates_bp.route('</int:id>', methods=['GET'])
+@candidates_bp.route('/<int:id>', methods=['GET'])
 def get_candidate_by_id(id):
     candidate = Candidate.query.get(id)
 

@@ -18,6 +18,11 @@ def create_app():
     db.init_app(app)
     CORS(app)
 
+    # Remove this later...
+    @app.route('/')
+    def index():
+        return {"message": "API is running"}, 200
+    
     from .routes.candidates import candidates_bp
     from .routes.followups import followups_bp
 

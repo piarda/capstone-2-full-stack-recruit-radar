@@ -11,7 +11,7 @@ def create_followup():
 
     try:
         candidate_id = data.get('candidate_id')
-        followups_date = data.get('followup_date') # YYYY-MM-DD
+        followup_date = data.get('followup_date')
         notes = data.get('notes', '')
         status = data.get('status', 'pending')
 
@@ -21,7 +21,7 @@ def create_followup():
         
         new_followup = FollowUp(
             candidate_id=candidate_id,
-            followups_date=datetime.strptime(followups_date, '%Y-%m-%d').date(),
+            followup_date=datetime.strptime(followup_date, '%Y-%m-%d').date(),
             notes=notes,
             status=status
         )

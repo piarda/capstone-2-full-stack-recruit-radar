@@ -26,7 +26,7 @@ class Candidate(db.Model):
         }
     
 class FollowUp(db.Model):
-    __tableName__ = 'followups'
+    __tablename__ = 'followups'
 
     id = db.Column(db.Integer, primary_key=True)
     candidate_id = db.Column(db.Integer, db.ForeignKey('candidates.id'), nullable=False)
@@ -39,7 +39,7 @@ class FollowUp(db.Model):
         return {
             "id": self.id,
             "candidate_id": self.candidate_id,
-            "followup_date": self.followup_date.isoformate(),
+            "followup_date": self.followup_date.isoformat(),
             "status": self.status,
             "notes": self.notes,
             "created_at": self.created_at.isoformat(),
