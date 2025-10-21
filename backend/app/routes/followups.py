@@ -62,3 +62,11 @@ def complete_followup(id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
+
+@followups_bp.route('/', methods=['GET'])
+def get_all_followups():
+    try:
+        followups = FollowUp.query.all()
+        return jsonify([f.to_dict() for f in followups]), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
