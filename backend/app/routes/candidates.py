@@ -6,8 +6,28 @@ candidates_bp = Blueprint('candidates', __name__)
 
 @candidates_bp.route('/', methods=['GET'])
 def get_candidates():
-    candidates = Candidate.query.filter_by(archived=False).all()
-    return jsonify([candidate.to_dict() for candidate in candidates]), 200
+    try:
+        page = request.args.get('page', 1, type=int)
+        limit = request.args.get('limit', 10, type=int)
+        search = request.args.get('search', '', type=str).strip().lower()
+
+        query = Candidate.query.filter_by(archived=False)
+
+        if search:
+            query = Candidate.query.filter(Candidate.name.ilike(f"%{search}%"))
+
+        paginated = query.order_by(Candidate.created_at.desc()).paginate(page=page, per_page=limit, error_out=False)
+
+        candidates = [c.to_dict() for c in paginated.items]
+        return jsonify({
+            "candidates": candidates,
+            "total": paginated.total,
+            "pages": paginated.pages,
+            "current_page": paginated.page
+        }), 200
+    except Exception as e:
+        print("Pagination error", str(e))
+        return jsonify({"error": "Failed to fetch candidates"}), 500
 
 @candidates_bp.route('/', methods=['POST'])
 def create_candidate():
@@ -110,3 +130,23 @@ def get_candidate_followups(id):
     sorted_followups = sorted(followups, key=lambda f: f["followup_date"])
 
     return jsonify(sorted_followups), 200
+
+@candidates_bp.route('/<int:id>/stage', methods=['PUT'])
+def update_stage(id):
+    candidate = Candidate.query.get(id)
+    if not candidate:
+        return jsonify({"error": "Candidate not found"}), 404
+    
+    data = request.get_json()
+    new_stage = data.get('stage')
+
+    if not new_stage:
+        return jsonify({"error": "Stage is required"}), 400
+    
+    candidate.stage = new_stage
+    try:
+        db.session.commit()
+        return jsonify(candidate.to_dict()), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500

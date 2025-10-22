@@ -2,9 +2,11 @@ import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
+from flask_migrate import Migrate
 from dotenv import load_dotenv
 
 db = SQLAlchemy()
+migrate = Migrate()
 
 def create_app():
     load_dotenv()
@@ -16,20 +18,13 @@ def create_app():
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
 
     db.init_app(app)
+    migrate.init_app(app, db)
     CORS(app)
-
-    # Remove this later...
-    @app.route('/')
-    def index():
-        return {"message": "API is running"}, 200
     
     from .routes.candidates import candidates_bp
     from .routes.followups import followups_bp
 
     app.register_blueprint(candidates_bp, url_prefix='/api/candidates')
     app.register_blueprint(followups_bp, url_prefix='/api/followups')
-
-    with app.app_context():
-        db.create_all()
 
     return app

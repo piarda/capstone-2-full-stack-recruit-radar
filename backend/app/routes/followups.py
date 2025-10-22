@@ -50,11 +50,16 @@ def get_due_followups():
 @followups_bp.route('/<int:id>/complete', methods=['PUT'])
 def complete_followup(id):
     followup = FollowUp.query.get(id)
-
     if not followup:
         return jsonify({"error": "Follow-up not found"}), 404
     
-    followup.status = 'completed'
+    data = request.get_json()
+    status = data.get('status', 'completed')
+
+    if status not in ['pending', 'completed']:
+        return jsonify({"error": "Invalid status"}), 400
+    
+    followup.status = status
 
     try:
         db.session.commit()

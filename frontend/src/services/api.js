@@ -1,7 +1,16 @@
 const BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5050/api';
 
-export async function fetchCandidates() {
-    const res = await fetch(`${BASE_URL}/candidates/`);
+export async function fetchCandidates(page = 1, perPage = 10, search = '') {
+    const params = new URLSearchParams({
+        page,
+        per_page: perPage,
+    });
+
+    if (search) {
+        params.append('search', search);
+    }
+
+    const res = await fetch(`${BASE_URL}/candidates/?${params.toString()}`);
     if (!res.ok) throw new Error('Failed to fetch candidates');
     return res.json();
 }
@@ -50,9 +59,14 @@ export async function getDueFollowUps() {
   return res.json();
 }
 
-export async function completeFollowUp(id) {
-  const res = await fetch(`${BASE_URL}/followups/${id}/complete`, { method: 'PUT' });
-  if (!res.ok) throw new Error('Failed to complete follow-up');
+export async function completeFollowUp(id, status = 'completed') {
+  const res = await fetch(`${BASE_URL}/followups/${id}/complete`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  });
+
+  if (!res.ok) throw new Error('Failed to update follow-up');
   return res.json();
 }
 
@@ -61,3 +75,14 @@ export async function getAllFollowUps() {
   if (!res.ok) throw new Error('Failed to fetch follow-ups');
   return res.json();
 }
+
+export const updateCandidateStage = async (id, stage) => {
+    const res = await fetch(`${BASE_URL}/candidates/${id}/stage`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stage })
+    });
+
+    if (!res.ok) throw new Error('Failed to update stage');
+    return res.json();
+};

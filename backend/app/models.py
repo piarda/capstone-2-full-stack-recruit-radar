@@ -10,6 +10,7 @@ class Candidate(db.Model):
     phone = db.Column(db.String(20))
     notes = db.Column(db.Text)
     archived = db.Column(db.Boolean, default=False)
+    stage = db.Column(db.String(50), default='Sourcing')
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     followups = db.relationship('FollowUp', backref='candidate', cascade='all, delete-orphan')
@@ -22,6 +23,7 @@ class Candidate(db.Model):
             "phone": self.phone,
             "notes": self.notes,
             "archived": self.archived,
+            "stage": self.stage,
             "created_at": self.created_at.isoformat(),
         }
     
