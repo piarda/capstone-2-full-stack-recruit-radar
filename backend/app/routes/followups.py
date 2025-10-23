@@ -37,15 +37,16 @@ def create_followup():
 
 @followups_bp.route('/due', methods=['GET'])
 def get_due_followups():
-    today = date.today()
-    end_of_week = today + timedelta(days=7)
+    try:
+        today = date.today()
+        followups = FollowUp.query.filter(
+            FollowUp.status == 'pending'
+        ).order_by(FollowUp.followup_date.asc()).all()
 
-    followups = FollowUp.query.filter(
-        FollowUp.followup_date.between(today, end_of_week),
-        FollowUp.status != 'completed'
-    ).all()
-
-    return jsonify([f.to_dict() for f in followups]), 200
+        return jsonify([f.to_dict() for f in followups]), 200
+    except Exception as e:
+        print("Failed to fetch due follow-ups:", e)
+        return jsonify({"error": "Server error"}), 500
 
 @followups_bp.route('/<int:id>/complete', methods=['PUT'])
 def complete_followup(id):
@@ -75,3 +76,44 @@ def get_all_followups():
         return jsonify([f.to_dict() for f in followups]), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@followups_bp.route('/<int:id>', methods=['PUT'])
+def update_followup(id):
+    followup = FollowUp.query.get(id)
+    if not followup:
+        return jsonify({"error": "Follow-up not found"}), 404
+
+    data = request.get_json()
+
+    if 'notes' in data:
+        followup.notes = data['notes']
+    if 'followup_date' in data:
+        try:
+            followup.followup_date = datetime.strptime(data['followup_date'], '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({"error": "Invalid date format, expected YYYY-MM-DD"}), 400
+    if 'status' in data:
+        if data['status'] not in ['pending', 'completed']:
+            return jsonify({"error": "Invalid status"}), 400
+        followup.status = data['status']
+
+    try:
+        db.session.commit()
+        return jsonify(followup.to_dict()), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+
+@followups_bp.route('/<int:id>', methods=['DELETE'])
+def delete_followup(id):
+    followup = FollowUp.query.get(id)
+    if not followup:
+        return jsonify({"error": "Follow-up not found"}), 404
+
+    try:
+        db.session.delete(followup)
+        db.session.commit()
+        return jsonify({"message": "Follow-up deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400

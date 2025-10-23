@@ -25,7 +25,7 @@ const ArchivedPage = () => {
 
     return (
         <div>
-            <h1>Archived Candidates</h1>
+            <h2>Archived Candidates</h2>
             {archived.length === 0 ? (
                 <p>No archived candidates.</p>
             ) : (

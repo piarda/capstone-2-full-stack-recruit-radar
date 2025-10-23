@@ -3,41 +3,39 @@ import CandidateCard from './CandidateCard';
 import CandidateForm from './CandidateForm';
 import { fetchCandidates, getAllFollowUps, archiveCandidate } from '../services/api';
 
+const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    const [year, month, day] = dateStr.split('-');
+    return `${month}/${day}/${year}`;
+};
+
+const parseLocalDate = (dateStr) => {
+    if (!dateStr) return null;
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+};
+
 const Dashboard = () => {
     const [candidates, setCandidates] = useState([]);
     const [followUps, setFollowups] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [showForm, setShowForm] = useState(false);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
 
     useEffect(() => {
-        const handler = setTimeout(() => {
-            setDebouncedSearch(searchTerm);
-            setPage(1);
-        }, 3000);
-
-        return () => clearTimeout(handler);
+        setPage(1);
     }, [searchTerm]);
-
-    const loadCandidates = async () => {
-        try {
-            const data = await fetchCandidates(page, 10, debouncedSearch);
-            setCandidates(data.candidates);
-            setTotalPages(data.pages);
-            setPage(data.current_page);
-        } catch (err) {
-            console.error('Failed to load candidates', err);
-        }
-    };
 
     useEffect(() => {
         const loadData = async () => {
             try {
-                setLoading(true)
-                await loadCandidates();
+                const data = await fetchCandidates(page, 10, searchTerm);
+                setCandidates(data.candidates);
+                setTotalPages(data.pages > 0 ? data.pages : 1);
+                setPage(Math.min(data.current_page, data.pages > 0 ? data.pages : 1));
+
                 const followUpData = await getAllFollowUps();
                 setFollowups(followUpData);
             } catch (err) {
@@ -48,7 +46,7 @@ const Dashboard = () => {
         };
 
         loadData();
-    }, [page, debouncedSearch]);
+    }, [page, searchTerm]);
 
     const handleAddCandidate = (newCandidate) => {
         setCandidates(prev => [...prev, newCandidate]);
@@ -68,7 +66,7 @@ const Dashboard = () => {
 
     return (
         <div>
-            <h1>Active Candidates</h1>
+            <h2>Active Candidates</h2>
 
             <input
                 type="text"
@@ -90,7 +88,13 @@ const Dashboard = () => {
                 <p>No candidates found.</p>
             ) : (
                 candidates.map(candidate => {
-                    const candidateFollowUps = followUps.filter(f => f.candidate_id === candidate.id);
+                    const candidateFollowUps = followUps
+                        .filter(f => f.candidate_id === candidate.id)
+                        .sort((a, b) => parseLocalDate(a.followup_date) - parseLocalDate(b.followup_date))
+                        .map(f => ({
+                            ...f,
+                            formatted_date: formatDate(f.followup_date),
+                        }));
 
                     return (
                         <CandidateCard

@@ -41,6 +41,8 @@ class FollowUp(db.Model):
         return {
             "id": self.id,
             "candidate_id": self.candidate_id,
+            "candidate_name": self.candidate.name if self.candidate else None,
+            "candidate_stage": self.candidate.stage if self.candidate else None,
             "followup_date": self.followup_date.isoformat(),
             "status": self.status,
             "notes": self.notes,

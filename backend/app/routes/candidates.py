@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
-from app.models import Candidate
+from sqlalchemy import func, asc, desc, nulls_last
+from app.models import Candidate, FollowUp
 from app import db
 
 candidates_bp = Blueprint('candidates', __name__)
@@ -11,12 +12,30 @@ def get_candidates():
         limit = request.args.get('limit', 10, type=int)
         search = request.args.get('search', '', type=str).strip().lower()
 
-        query = Candidate.query.filter_by(archived=False)
+        earliest_followup_subq = (
+            db.session.query(
+                FollowUp.candidate_id,
+                func.min(FollowUp.followup_date).label('earliest_followup_date')
+            )
+            .group_by(FollowUp.candidate_id)
+            .subquery()
+        )
+
+        query = (
+            db.session.query(Candidate)
+            .outerjoin(earliest_followup_subq, Candidate.id == earliest_followup_subq.c.candidate_id)
+            .filter(Candidate.archived == False)
+        )
 
         if search:
-            query = Candidate.query.filter(Candidate.name.ilike(f"%{search}%"))
+            query = query.filter(Candidate.name.ilike(f"%{search}%"))
 
-        paginated = query.order_by(Candidate.created_at.desc()).paginate(page=page, per_page=limit, error_out=False)
+        query = query.order_by(
+            nulls_last(asc(earliest_followup_subq.c.earliest_followup_date)),
+            desc(Candidate.created_at)
+        )
+
+        paginated = query.paginate(page=page, per_page=limit, error_out=False)
 
         candidates = [c.to_dict() for c in paginated.items]
         return jsonify({
@@ -25,6 +44,7 @@ def get_candidates():
             "pages": paginated.pages,
             "current_page": paginated.page
         }), 200
+    
     except Exception as e:
         print("Pagination error", str(e))
         return jsonify({"error": "Failed to fetch candidates"}), 500
@@ -150,3 +170,29 @@ def update_stage(id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
+# Remove later
+@candidates_bp.route('/seed_followups', methods=['POST'])
+def seed_followups():
+    from datetime import datetime, timedelta
+    import random
+
+    try:
+        candidates = Candidate.query.filter_by(archived=False).all()
+        for i, candidate in enumerate(candidates[:10]):
+            for _ in range(random.randint(1, 3)):
+                days_ago = random.randint(0, 30)
+                followup = FollowUp(
+                    candidate_id=candidate.id,
+                    followup_date=datetime.utcnow() - timedelta(days=days_ago),
+                    status=random.choice(['pending', 'completed']),
+                    notes=f'Dummy follow-up {random.randint(100, 999)}'
+                )
+                db.session.add(followup)
+
+        db.session.commit()
+        return jsonify({"message": "Dummy follow-ups added."}), 201
+
+    except Exception as e:
+        print("Seeding error:", e)
+        return jsonify({"error": "Failed to seed follow-ups"}), 500
