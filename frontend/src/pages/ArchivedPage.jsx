@@ -30,15 +30,17 @@ const ArchivedPage = () => {
                 <p>No archived candidates.</p>
             ) : (
                 <ul>
-                {archived.map(candidate => (
-                    <li key={candidate.id} style={{ marginBottom: '1rem' }}>
-                    <strong>{candidate.name}</strong> — {candidate.email}
-                    <button
-                        style={{ marginLeft: '1rem' }}
-                        onClick={() => handleUnarchive(candidate.id)}
-                    >
-                        Unarchive
-                    </button>
+                {[...archived]
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map(candidate => (
+                        <li key={candidate.id} style={{ marginBottom: '1rem' }}>
+                        <strong>{candidate.name}</strong> — {candidate.email}
+                        <button
+                            style={{ marginLeft: '1rem' }}
+                            onClick={() => handleUnarchive(candidate.id)}
+                        >
+                            Unarchive
+                        </button>
                     </li>
                 ))}
                 </ul>
